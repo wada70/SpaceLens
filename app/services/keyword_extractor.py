@@ -38,11 +38,14 @@ async def extract_keywords(question: str) -> list[str]:
             response.raise_for_status()
             raw = response.json()["message"]["content"].strip()
         keywords: list[str] = _parse_json_array(raw)
+        keywords = [kw.strip() for kw in keywords if kw.strip()]
+        if not keywords:
+            raise ValueError("LLM returned no usable keywords")
         logger.debug("Extracted keywords: %s", keywords)
         return keywords
     except Exception as exc:
         logger.warning("Keyword extraction failed, falling back to raw query: %s", exc)
-        return [question]
+        return [w for w in question.split() if w] or [question]
 
 
 def _parse_json_array(text: str) -> list[str]:
@@ -58,6 +61,7 @@ def _parse_json_array(text: str) -> list[str]:
 
 def keywords_to_cql(keywords: list[str], space_keys: list[str] | None = None) -> str:
     """Build a simple CQL query from a list of keywords."""
+    keywords = [kw.strip() for kw in keywords if kw.strip()]
     terms = " OR ".join(f'text ~ "{kw}"' for kw in keywords)
     cql = f"type = page AND ({terms})"
     if space_keys:
