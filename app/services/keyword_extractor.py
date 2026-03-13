@@ -2,7 +2,7 @@
 import logging
 import re
 
-import anthropic
+import httpx
 
 from app.core.config import get_settings
 
@@ -18,16 +18,25 @@ Output ONLY a JSON array of strings, nothing else. Example: ["keyword1", "phrase
 async def extract_keywords(question: str) -> list[str]:
     """Return a list of CQL-friendly keywords for the given question."""
     settings = get_settings()
-    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+
+    payload = {
+        "model": settings.ollama_model,
+        "messages": [
+            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "user", "content": question},
+        ],
+        "options": {"num_predict": 128},
+        "stream": False,
+    }
 
     try:
-        message = await client.messages.create(
-            model=settings.llm_model,
-            max_tokens=128,
-            system=_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": question}],
-        )
-        raw = message.content[0].text.strip()
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{settings.ollama_base_url}/api/chat",
+                json=payload,
+            )
+            response.raise_for_status()
+            raw = response.json()["message"]["content"].strip()
         keywords: list[str] = _parse_json_array(raw)
         logger.debug("Extracted keywords: %s", keywords)
         return keywords

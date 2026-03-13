@@ -11,9 +11,9 @@ class Settings(BaseSettings):
     confluence_api_token: str = ""
     confluence_space_keys: list[str] = []  # empty = search all spaces
 
-    # LLM (Anthropic Claude)
-    anthropic_api_key: str = ""
-    llm_model: str = "claude-haiku-4-5-20251001"
+    # LLM (Ollama)
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "llama3.2"
     llm_max_tokens: int = 512
 
     # Re-ranker

@@ -1,7 +1,7 @@
 """Generate a concise answer from the top-ranked Confluence pages."""
 import logging
 
-import anthropic
+import httpx
 
 from app.core.config import get_settings
 from app.models.search import ConfluencePage
@@ -38,15 +38,24 @@ async def synthesize_answer(
     context = "\n\n".join(context_parts)
     user_message = f"Question: {question}\n\nContext from Confluence:\n{context}"
 
-    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+    payload = {
+        "model": settings.ollama_model,
+        "messages": [
+            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "user", "content": user_message},
+        ],
+        "options": {"num_predict": settings.llm_max_tokens},
+        "stream": False,
+    }
+
     try:
-        message = await client.messages.create(
-            model=settings.llm_model,
-            max_tokens=settings.llm_max_tokens,
-            system=_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_message}],
-        )
-        return message.content[0].text.strip()
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                f"{settings.ollama_base_url}/api/chat",
+                json=payload,
+            )
+            response.raise_for_status()
+            return response.json()["message"]["content"].strip()
     except Exception as exc:
         logger.error("Answer synthesis failed: %s", exc)
         return "Unable to generate an answer at this time."
