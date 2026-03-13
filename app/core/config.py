@@ -13,7 +13,7 @@ class Settings(BaseSettings):
 
     # LLM (Ollama)
     ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "llama3.2"
+    ollama_model: str = "qwen3.5:0.8b"
     llm_max_tokens: int = 512
 
     # Re-ranker

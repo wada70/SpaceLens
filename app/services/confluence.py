@@ -43,7 +43,7 @@ class ConfluenceClient:
             "expand": "space,history.lastUpdated,excerpt",
         }
         try:
-            resp = await self._client.get("/rest/api/content/search", params=params)
+            resp = await self._client.get("/rest/api/search", params=params)
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
             logger.error("Confluence search failed: %s", exc)
