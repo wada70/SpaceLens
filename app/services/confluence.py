@@ -18,42 +18,51 @@ class ConfluenceClient:
         self._base = s.confluence_url.rstrip("/")
 
         if s.confluence_pat:
-            auth_headers = {"Authorization": f"Bearer {s.confluence_pat}"}
-            auth = None
+            self._headers = {
+                "Accept": "application/json",
+                "Authorization": f"Bearer {s.confluence_pat}",
+            }
+            self._auth = None
         else:
-            auth_headers = {}
-            auth = (s.confluence_username, s.confluence_api_token)
+            self._headers = {"Accept": "application/json"}
+            self._auth = (s.confluence_username, s.confluence_api_token)
 
-        self._client = httpx.AsyncClient(
-            base_url=self._base,
-            auth=auth,
+    def _get(self, path: str, params: dict | None = None) -> httpx.AsyncClient:
+        """Return a one-shot async client for a GET request with the full URL."""
+        return httpx.AsyncClient(
+            auth=self._auth,
+            headers=self._headers,
             timeout=30,
-            headers={"Accept": "application/json", **auth_headers},
+            params=params or {},
         )
 
     async def health_check(self) -> bool:
+        url = f"{self._base}/rest/api/space"
         try:
-            resp = await self._client.get("/rest/api/space", params={"limit": 1})
+            async with httpx.AsyncClient(
+                auth=self._auth, headers=self._headers, timeout=10
+            ) as client:
+                resp = await client.get(url, params={"limit": 1})
             return resp.status_code == 200
         except Exception:
             return False
 
-    async def search(
-        self,
-        cql: str,
-        limit: int = 20,
-    ) -> list[ConfluencePage]:
-        """Execute a CQL query and return lightweight page objects."""
+    async def search(self, cql: str, limit: int = 20) -> list[ConfluencePage]:
+        """Execute a CQL query via GET and return lightweight page objects."""
+        url = f"{self._base}/rest/api/search"
         params = {
             "cql": cql,
             "limit": limit,
             "expand": "space,history.lastUpdated,excerpt",
         }
         try:
-            resp = await self._client.get("/rest/api/search", params=params)
+            async with httpx.AsyncClient(
+                auth=self._auth, headers=self._headers, timeout=30
+            ) as client:
+                resp = await client.get(url, params=params)
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            logger.error("Confluence search failed: %s", exc)
+            logger.error("Confluence search failed: %s – response: %s", exc, exc.response.text[:500])
             return []
 
         pages: list[ConfluencePage] = []
@@ -76,12 +85,13 @@ class ConfluenceClient:
         return pages
 
     async def get_page_body(self, page_id: str) -> str:
-        """Return the plain-text body of a single page."""
+        """Return the plain-text body of a single page via GET."""
+        url = f"{self._base}/rest/api/content/{page_id}"
         try:
-            resp = await self._client.get(
-                f"/rest/api/content/{page_id}",
-                params={"expand": "body.export_view"},
-            )
+            async with httpx.AsyncClient(
+                auth=self._auth, headers=self._headers, timeout=30
+            ) as client:
+                resp = await client.get(url, params={"expand": "body.export_view"})
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
             logger.warning("Could not fetch page %s: %s", page_id, exc)
@@ -89,9 +99,6 @@ class ConfluenceClient:
 
         raw_html = resp.json().get("body", {}).get("export_view", {}).get("value", "")
         return _strip_html(raw_html)
-
-    async def aclose(self) -> None:
-        await self._client.aclose()
 
 
 def _strip_html(html: str) -> str:
