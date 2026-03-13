@@ -16,12 +16,19 @@ class ConfluenceClient:
     def __init__(self) -> None:
         s = get_settings()
         self._base = s.confluence_url.rstrip("/")
-        self._auth = (s.confluence_username, s.confluence_api_token)
+
+        if s.confluence_pat:
+            auth_headers = {"Authorization": f"Bearer {s.confluence_pat}"}
+            auth = None
+        else:
+            auth_headers = {}
+            auth = (s.confluence_username, s.confluence_api_token)
+
         self._client = httpx.AsyncClient(
             base_url=self._base,
-            auth=self._auth,
+            auth=auth,
             timeout=30,
-            headers={"Accept": "application/json"},
+            headers={"Accept": "application/json", **auth_headers},
         )
 
     async def health_check(self) -> bool:

@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     confluence_url: str = "https://your-confluence.example.com"
     confluence_username: str = ""
     confluence_api_token: str = ""
+    confluence_pat: str = ""              # Personal Access Token (Data Center); takes priority over basic auth
     confluence_space_keys: list[str] = []  # empty = search all spaces
 
     # LLM (Ollama)
