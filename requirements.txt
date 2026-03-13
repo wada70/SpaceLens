@@ -16,7 +16,7 @@ anthropic==0.40.0
 
 # Semantic re-ranking
 sentence-transformers==3.3.1
-torch==2.5.1          # CPU-only build is fine; override in Docker if GPU available
+torch>=2.6.0          # CPU-only build is fine; override in Docker if GPU available
 
 # Dev / test
 pytest==8.3.3
