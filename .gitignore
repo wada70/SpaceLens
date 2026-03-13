@@ -16,7 +16,7 @@ env/
 
 # Models cache (sentence-transformers downloads here)
 .cache/
-models/
+/models/
 
 # IDE
 .idea/
