@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+
+# Env / secrets
+.env
+*.env
+
+# Models cache (sentence-transformers downloads here)
+.cache/
+models/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artefacts
+.pytest_cache/
+.coverage
+htmlcov/
